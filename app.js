@@ -115,6 +115,9 @@ if(d)d.remove()}const isGoods=t=>t==="buy"||t==="sell"
 const byDateAsc=(a,b)=>(a.date||"").localeCompare(b.date||"")||(a.ts||0)-(b.ts||0)
 const txList=()=>Object.values(S.txns).filter(t=>t.t!=="exp").sort((a,b)=>byDateAsc(b,a))
 const tons=t=>t.unit==="Kg"?num(t.qty)/1e3:num(t.qty)
+const rkg=t=>t.rateUnit==="kg"?num(t.rate):num(t.rate)/1e3
+const prkg=p=>p.rateUnit==="kg"?num(p.rate):num(p.rate)/1e3
+const fr=n=>(+(+n||0).toFixed(2)).toLocaleString("en-IN",{maximumFractionDigits:2})
 const partyTempoPaid=o=>(o.advBy==="party"?num(o.adv):0)+(o.khaliBy==="party"?num(o.khali):0)
 function effects(t){const r=[],a=num(t.amount)
 if(t.t==="in")r.push([t.party,-a])
@@ -144,7 +147,7 @@ return p.name+(p.city?" ("+p.city+")":"")}const byWho=(by,t)=>by==="party"?t==="
 function sentence(t){const n=pfull(t.party)
 return t.t==="buy"?n+" se maal liya":t.t==="sell"?n+" ko sale kiya":t.t==="in"?n+" se paisa mila":n+" ko paisa diya"}function allocText(t){if(!t.alloc)return""
 const ks=Object.keys(t.alloc).map(id=>S.txns[id]).filter(Boolean).sort(byDateAsc)
-return ks.length?ks.map(o=>olabel(o)).join(", ")+" ka":""}function detail(t){if(isGoods(t.t)){let s=`${qn(t.qty)} ${t.unit||"Ton"}${num(t.rate)?" × ₹"+num(t.rate).toLocaleString("en-IN")+"/Ton":""}`
+return ks.length?ks.map(o=>olabel(o)).join(", ")+" ka":""}function detail(t){if(isGoods(t.t)){let s=`${qn(t.qty)} ${t.unit||"Ton"}${num(t.rate)?" × ₹"+fr(rkg(t))+"/Kg":""}`
 if(num(t.paid))s+=` · turant ${t.t==="sell"?"mila":"diya"} ${inr(t.paid)}`
 if(t.tempo||t.vehicle)s+=` · 🚚 ${t.tempo?pname(t.tempo):""}${t.vehicle?" "+t.vehicle:""}`
 return s}const a=allocText(t)
@@ -193,7 +196,7 @@ function histRow(t){const T=TT[t.t]||TT.sell
 const p=S.parties[t.party]||{}
 const nm=`${esc(p.name||"—")}${p.city?` <span class="c-m" style="font-weight:500;font-size:13px">· ${esc(p.city)}</span>`:""}`
 if(isGoods(t.t)){const bill=num(t.amount),due=orderDue(t,t.party,RA),got=bill-due,pct=bill?Math.max(0,Math.min(100,got/bill*100)):0
-return`<div class="hcard" data-tx="${esc(t.id)}"><div class="av ${T.c}">${ICON[t.t]}</div><div class="mid">\n      <div class="hl"><span class="t1">${nm}</span><b>${inr(bill)}</b></div>\n      <div class="t2">${T.l} · ${qn(t.qty)} ${t.unit||"Ton"}${num(t.rate)?" × ₹"+num(t.rate).toLocaleString("en-IN"):""}${t.tempo?" · 🚚 "+esc(pname(t.tempo)):""}</div>\n      <div class="bar"><i style="width:${pct}%;${due>.5?"background:#E89B3C":""}"></i></div>\n      <div class="hl sm"><span>${t.t==="sell"?"Mila":"Diya"} ${inr(got)}</span><span class="${due>.5?"c-o":"c-g"}">${due>.5?"Baki "+inr(due):"✓ Pura "+(t.t==="sell"?"mila":"diya")}</span></div>\n      ${t.note?`<div class="t3">“${esc(t.note)}”</div>`:""}</div></div>`}const a=allocText(t)
+return`<div class="hcard" data-tx="${esc(t.id)}"><div class="av ${T.c}">${ICON[t.t]}</div><div class="mid">\n      <div class="hl"><span class="t1">${nm}</span><b>${inr(bill)}</b></div>\n      <div class="t2">${T.l} · ${qn(t.qty)} ${t.unit||"Ton"}${num(t.rate)?" × ₹"+fr(rkg(t))+"/Kg":""}${t.tempo?" · 🚚 "+esc(pname(t.tempo)):""}</div>\n      <div class="bar"><i style="width:${pct}%;${due>.5?"background:#E89B3C":""}"></i></div>\n      <div class="hl sm"><span>${t.t==="sell"?"Mila":"Diya"} ${inr(got)}</span><span class="${due>.5?"c-o":"c-g"}">${due>.5?"Baki "+inr(due):"✓ Pura "+(t.t==="sell"?"mila":"diya")}</span></div>\n      ${t.note?`<div class="t3">“${esc(t.note)}”</div>`:""}</div></div>`}const a=allocText(t)
 const inn=t.t==="in"
 return`<div class="hcard" data-tx="${esc(t.id)}"><div class="av ${T.c}">${ICON[t.t]}</div><div class="mid">\n    <div class="hl"><span class="t1">${nm}</span><b class="${inn?"c-g":"c-r"}">${inn?"+":"−"} ${inr(t.amount)}</b></div>\n    <div class="t2">${inn?"Paisa mila":"Paisa diya"} · ${esc(t.mode||"Cash")}</div>\n    ${a?`<div class="t2" style="margin-top:4px"><span class="tag gray">${esc(a)} maal</span></div>`:""}\n    ${t.note?`<div class="t3">“${esc(t.note)}”</div>`:""}</div></div>`}function renderHist(){const v=$("#view")
 if(v.dataset.v!=="hist"){v.dataset.v="hist"
@@ -273,7 +276,7 @@ editId=o.id||null
 backTo=o.back||null
 allocSel=new Set(o.id?Object.keys(e.alloc||{}):o.orders||[])
 const g=isGoods(e.t)
-openSheet(`${title(o.id?"Entry badlo":"Nayi entry")}\n  <div class="ttabs" id="eType">${Object.entries(TT).map(([k,T])=>`<button type="button" data-et="${k}" class="${T.c} ${k===e.t?"on":""}"><span class="ic">${ICON[k]}</span>${T.s}</button>`).join("")}</div>\n  <form id="eForm" onsubmit="return false">\n    <div class="f"><label id="pLbl">${PLBL[e.t]}</label>${picker("party",e.party,"Naam likho — jaise Ashok bhai")}</div>\n    <div class="goods" ${g?"":"hidden"}>\n      <input type="hidden" name="unit" value="${esc(e.unit||"Ton")}"><input type="hidden" name="pmode" value="${esc(e.pmode||"Cash")}">\n      <div class="f g2">\n        <div><label>Maal (${esc(e.unit||"Ton")})</label><input name="qty" inputmode="decimal" placeholder="Kitna Ton?" value="${e.qty??""}"></div>\n        <div><label>Bhav ₹/Ton</label><input name="rate" inputmode="decimal" placeholder="Bhav" value="${e.rate??""}"></div>\n      </div>\n      <div class="totbox"><div><span>Total bill</span><b id="totv">₹0</b></div><button type="button" data-edtot>✎ Badlo</button></div>\n      <div class="f" id="totIn" ${g&&e.amount&&Math.abs(num(e.amount)-tons(e)*num(e.rate))>1?"":"hidden"}><label>Total bill khud likho (₹)</label><input name="gamt" inputmode="decimal" placeholder="₹" value="${g&&e.amount?e.amount:""}" ${g&&e.amount&&Math.abs(num(e.amount)-tons(e)*num(e.rate))>1?'data-man="1"':""}></div>\n      <div class="f"><label id="paidLbl">${e.t==="buy"?"Abhi kitna paisa diya?":"Abhi kitna paisa mila?"}</label><input name="paid" inputmode="decimal" placeholder="₹0 — nahi to khali chhodo" value="${e.paid||""}"></div>\n      <button type="button" class="addrow" data-tempotog ${e.tempo||num(e.bhada)?"hidden":""}>${ICON.truck} Tempo / bhada add karo</button>\n      <div class="box" id="tempoBox" ${e.tempo||num(e.bhada)?"":"hidden"}><div class="box-h"><span style="color:var(--ink);font-size:13.5px;font-weight:700;display:flex;gap:6px;align-items:center">${ICON.truck} Tempo</span></div>\n        ${picker("tempo",e.tempo,"Tempo wale ka naam")}\n        <div class="g2" style="margin-top:8px"><input name="vehicle" placeholder="Gadi no." value="${esc(e.vehicle||"")}"><input name="bhada" inputmode="decimal" placeholder="Total bhada ₹" value="${e.bhada||""}"></div>\n        <div class="prow2"><div><div class="lab">Advance</div><input name="adv" inputmode="decimal" placeholder="₹0" value="${e.adv||""}"></div><div><div class="lab">Kisne diya?</div>${bySeg("advBy",e.advBy,e.t)}</div></div>\n        <div class="prow2"><div><div class="lab">Khali hone pe</div><input name="khali" inputmode="decimal" placeholder="₹0" value="${e.khali||""}"></div><div><div class="lab">Kisne diya?</div>${bySeg("khaliBy",e.khaliBy,e.t)}</div></div>\n        <div class="hint">Khali ka paisa baad me ho to abhi khali chhodo.</div>\n      </div>\n    </div>\n    <div class="pay" ${g?"hidden":""}>\n      <div class="f"><label>Amount (₹)</label><input name="pamt" inputmode="decimal" placeholder="0" value="${!g&&e.amount?e.amount:""}" ${!g&&e.amount?'data-man="1"':""}></div>\n      <div class="f"><label>Kaise?</label><div class="seg" id="eMode">${["Cash","UPI","Bank","Cheque"].map(m=>`<button type="button" data-mode="${m}" class="${m===(e.mode||"Cash")?"on":""}">${m}</button>`).join("")}</div></div>\n      <div id="allocBox"></div>\n    </div>\n    <div class="f g2"><div><label>Tarikh</label><input type="date" name="date" value="${esc(e.date||today())}"></div>\n      <div><label>Note <span style="font-weight:500">(optional)</span></label><input name="note" placeholder="Jumma ka maal" value="${esc(e.note||"")}"></div></div>\n    <div class="hint" id="dayHint">${esc(dlabel(e.date||today()))}</div>\n    <div id="eSum"></div>\n    ${o.id&&g?`<button type="button" class="btn ghost" style="width:100%;margin-top:12px" data-billtx>🧾 Is order ka bill bhejo (WhatsApp)</button>`:""}\n    <div class="actions">\n      ${o.id?`<button type="button" class="btn danger" data-deltx>Delete</button>`:`<button type="button" class="btn ghost" data-save="again">Save + Nayi</button>`}\n      <button type="button" class="btn" data-save="1">Save</button>\n    </div>\n  </form>`,{
+openSheet(`${title(o.id?"Entry badlo":"Nayi entry")}\n  <div class="ttabs" id="eType">${Object.entries(TT).map(([k,T])=>`<button type="button" data-et="${k}" class="${T.c} ${k===e.t?"on":""}"><span class="ic">${ICON[k]}</span>${T.s}</button>`).join("")}</div>\n  <form id="eForm" onsubmit="return false">\n    <div class="f"><label id="pLbl">${PLBL[e.t]}</label>${picker("party",e.party,"Naam likho — jaise Ashok bhai")}</div>\n    <div class="goods" ${g?"":"hidden"}>\n      <input type="hidden" name="unit" value="${esc(e.unit||"Ton")}"><input type="hidden" name="pmode" value="${esc(e.pmode||"Cash")}">\n      <div class="f g2">\n        <div><label>Maal (${esc(e.unit||"Ton")})</label><input name="qty" inputmode="decimal" placeholder="Kitna Ton?" value="${e.qty??""}"></div>\n        <div><label>Bhav ₹/Kg</label><input name="rate" inputmode="decimal" placeholder="jaise 8.50" value="${num(e.rate)?+rkg(e).toFixed(4):""}"></div>\n      </div>\n      <div class="totbox"><div><span>Total bill</span><b id="totv">₹0</b></div><button type="button" data-edtot>✎ Badlo</button></div>\n      <div class="f" id="totIn" ${g&&e.amount&&Math.abs(num(e.amount)-tons(e)*1e3*rkg(e))>1?"":"hidden"}><label>Total bill khud likho (₹)</label><input name="gamt" inputmode="decimal" placeholder="₹" value="${g&&e.amount?e.amount:""}" ${g&&e.amount&&Math.abs(num(e.amount)-tons(e)*1e3*rkg(e))>1?'data-man="1"':""}></div>\n      <div class="f"><label id="paidLbl">${e.t==="buy"?"Abhi kitna paisa diya?":"Abhi kitna paisa mila?"}</label><input name="paid" inputmode="decimal" placeholder="₹0 — nahi to khali chhodo" value="${e.paid||""}"></div>\n      <button type="button" class="addrow" data-tempotog ${e.tempo||num(e.bhada)?"hidden":""}>${ICON.truck} Tempo / bhada add karo</button>\n      <div class="box" id="tempoBox" ${e.tempo||num(e.bhada)?"":"hidden"}><div class="box-h"><span style="color:var(--ink);font-size:13.5px;font-weight:700;display:flex;gap:6px;align-items:center">${ICON.truck} Tempo</span></div>\n        ${picker("tempo",e.tempo,"Tempo wale ka naam")}\n        <div class="g2" style="margin-top:8px"><input name="vehicle" placeholder="Gadi no." value="${esc(e.vehicle||"")}"><input name="bhada" inputmode="decimal" placeholder="Total bhada ₹" value="${e.bhada||""}"></div>\n        <div class="prow2"><div><div class="lab">Advance</div><input name="adv" inputmode="decimal" placeholder="₹0" value="${e.adv||""}"></div><div><div class="lab">Kisne diya?</div>${bySeg("advBy",e.advBy,e.t)}</div></div>\n        <div class="prow2"><div><div class="lab">Khali hone pe</div><input name="khali" inputmode="decimal" placeholder="₹0" value="${e.khali||""}"></div><div><div class="lab">Kisne diya?</div>${bySeg("khaliBy",e.khaliBy,e.t)}</div></div>\n        <div class="hint">Khali ka paisa baad me ho to abhi khali chhodo.</div>\n      </div>\n    </div>\n    <div class="pay" ${g?"hidden":""}>\n      <div class="f"><label>Amount (₹)</label><input name="pamt" inputmode="decimal" placeholder="0" value="${!g&&e.amount?e.amount:""}" ${!g&&e.amount?'data-man="1"':""}></div>\n      <div class="f"><label>Kaise?</label><div class="seg" id="eMode">${["Cash","UPI","Bank","Cheque"].map(m=>`<button type="button" data-mode="${m}" class="${m===(e.mode||"Cash")?"on":""}">${m}</button>`).join("")}</div></div>\n      <div id="allocBox"></div>\n    </div>\n    <div class="f g2"><div><label>Tarikh</label><input type="date" name="date" value="${esc(e.date||today())}"></div>\n      <div><label>Note <span style="font-weight:500">(optional)</span></label><input name="note" placeholder="Jumma ka maal" value="${esc(e.note||"")}"></div></div>\n    <div class="hint" id="dayHint">${esc(dlabel(e.date||today()))}</div>\n    <div id="eSum"></div>\n    ${o.id&&g?`<button type="button" class="btn ghost" style="width:100%;margin-top:12px" data-billtx>🧾 Is order ka bill bhejo (WhatsApp)</button>`:""}\n    <div class="actions">\n      ${o.id?`<button type="button" class="btn danger" data-deltx>Delete</button>`:`<button type="button" class="btn ghost" data-save="again">Save + Nayi</button>`}\n      <button type="button" class="btn" data-save="1">Save</button>\n    </div>\n  </form>`,{
 type:"entry"})
 if(!o.id&&o.party)fillFromParty($("#eForm [data-k=party]"))
 renderAlloc()
@@ -292,18 +295,18 @@ if(g&&!editId&&prev!==t){F("rate").value=""
 fillFromParty($("#eForm [data-k=party]"))}if(prev!==t)allocSel.clear()
 renderAlloc()
 updCalc()}function lastRate(pid,t){const x=txList().find(x=>x.party===pid&&x.t===t&&num(x.rate))
-return x?num(x.rate):0}function fillFromParty(pk){if(!$("#eForm")||!pk)return
+return x?rkg(x):0}function fillFromParty(pk){if(!$("#eForm")||!pk)return
 const p=S.parties[pk.dataset.id]
 if(!p)return
-if(pk.dataset.k==="party"&&isGoods(entryType)&&!F("rate").value){const r=lastRate(p.id,entryType)||num(p.rate)
-if(r)F("rate").value=r}if(pk.dataset.k==="tempo"&&!F("bhada").value&&num(p.rate))F("bhada").value=num(p.rate)
+if(pk.dataset.k==="party"&&isGoods(entryType)&&!F("rate").value){const r=lastRate(p.id,entryType)||prkg(p)
+if(r)F("rate").value=+r.toFixed(4)}if(pk.dataset.k==="tempo"&&!F("bhada").value&&num(p.rate))F("bhada").value=num(p.rate)
 updCalc()}const formTons=()=>{const q=num(fv("qty"))
 return fv("unit")==="Kg"?q/1e3:q}
 function updCalc(){if(!$("#eForm"))return
 const a=F("gamt")
-if(a&&!a.dataset.man){const v=formTons()*num(fv("rate"))
+if(a&&!a.dataset.man){const v=formTons()*1e3*num(fv("rate"))
 a.value=v?+v.toFixed(2):""}const tv=$("#totv")
-if(tv)tv.textContent=inr(num(fv("gamt"))||formTons()*num(fv("rate")))
+if(tv)tv.textContent=inr(num(fv("gamt"))||formTons()*1e3*num(fv("rate")))
 entrySummary()}function bw(v,name){return v>.5?`<b class="c-g">${esc(name)} se ${inr(v)} lena</b>`:v<-.5?`<b class="c-r">${esc(name)} ko ${inr(v)} dena</b>`:`<b>Hisab barabar</b>`}function renderAlloc(){const box=$("#allocBox")
 if(!box)return
 if(isGoods(entryType)){box.innerHTML=""
@@ -344,7 +347,7 @@ if(!box)return
 const t=entryType,g=isGoods(t)
 const pk=$("#eForm [data-k=party]")
 const name=pk.querySelector("input").value.trim()
-const amt=g?num(fv("gamt"))||formTons()*num(fv("rate")):num(fv("pamt"))
+const amt=g?num(fv("gamt"))||formTons()*1e3*num(fv("rate")):num(fv("pamt"))
 const paid=g?num(fv("paid")):0
 if(!amt&&!name){box.innerHTML=""
 return}const pid=pickedId(pk)
@@ -371,7 +374,7 @@ const g=isGoods(t)
 const pEl=$("#eForm [data-k=party]")
 if(!pEl.querySelector("input").value.trim()){toast("Party ka naam daalo")
 pEl.querySelector("input").focus()
-return}const amount=g?num(fv("gamt"))||formTons()*num(fv("rate")):num(fv("pamt"))
+return}const amount=g?num(fv("gamt"))||formTons()*1e3*num(fv("rate")):num(fv("pamt"))
 if(!amount){toast("Amount daalo")
 F(g?fv("qty")?"rate":"qty":"pamt").focus()
 return}const old=editId?S.txns[editId]:null
@@ -379,6 +382,7 @@ const d={kind:"txn",id:editId||"t_"+uid(),t:t,date:fv("date")||today(),party:res
 if(g){d.qty=num(fv("qty"))
 d.unit=fv("unit")
 d.rate=num(fv("rate"))
+d.rateUnit="kg"
 d.paid=Math.min(num(fv("paid")),d.amount)
 if(d.paid)d.pmode=fv("pmode")
 const tp=resolvePick($("#eForm [data-k=tempo]"),"tempo")
@@ -391,7 +395,7 @@ if(!d.bhada&&(d.adv||d.khali))d.bhada=d.adv+d.khali
 if(d.adv)d.advBy=fv("advBy")
 if(d.khali){d.khaliBy=fv("khaliBy")
 d.khaliDate=old&&num(old.khali)&&old.khaliDate||today()}const pp=S.parties[d.party]
-if(pp&&d.rate&&num(pp.rate)!==d.rate)put({...pp,rate:d.rate})
+if(pp&&d.rate&&(pp.rateUnit!=="kg"||num(pp.rate)!==d.rate))put({...pp,rate:d.rate,rateUnit:"kg"})
 const tt=S.parties[d.tempo]
 if(tt&&d.bhada&&num(tt.rate)!==d.bhada)put({...tt,rate:d.bhada})}else{d.mode=(document.querySelector("#eMode button.on")||{}).dataset?.mode||"Cash"
 if(allocSel.size){const{plan:plan}=allocPlan(d.party,d.amount)
@@ -410,7 +414,7 @@ const out=[]
 for(const t of Object.values(S.txns).sort(byDateAsc)){if(t.party!==id&&t.tempo!==id)continue
 const d=deltaFor(t,id)
 run+=d
-out.push({t:t,d:d,run:run})}return out}function ledDesc(t,id){if(isGoods(t.t)&&t.party===id){let s=`${TT[t.t].l} · ${qn(t.qty)} ${t.unit||"Ton"}${num(t.rate)?" × ₹"+num(t.rate).toLocaleString("en-IN"):""} = ${inr(t.amount)}`
+out.push({t:t,d:d,run:run})}return out}function ledDesc(t,id){if(isGoods(t.t)&&t.party===id){let s=`${TT[t.t].l} · ${qn(t.qty)} ${t.unit||"Ton"}${num(t.rate)?" × ₹"+fr(rkg(t))+"/Kg":""} = ${inr(t.amount)}`
 if(num(t.paid))s+=` · turant ${t.t==="sell"?"mila":"diya"} ${inr(t.paid)}`
 const pt=partyTempoPaid(t)
 if(pt)s+=` · tempo ko inhone diya ${inr(pt)}`
@@ -440,7 +444,7 @@ const isT=o.tempo===id&&o.party!==id
 const bill=orderBill(o,id)
 return`<div class="item wrap" data-tx="${esc(o.id)}"><div class="av ${isT?"violet":TT[o.t].c}">${isT?ICON.truck:ICON[o.t]}</div>\n      <div class="mid"><div class="t1" style="font-size:14.5px">${esc(dlabel(o.date,true))} · ${qn(o.qty)} ${o.unit||"Ton"}${isT?" · "+esc(pname(o.party)):""}${o.note?` <span class="c-m" style="font-weight:500">· ${esc(o.note)}</span>`:""}</div>\n      <div class="t2">${isT?"Bhada":"Bill"} ${inr(bill)} · ${isB?"Mila":"Diya"} ${inr(bill-d)}${o.vehicle?" · "+esc(o.vehicle):""}</div></div>\n      <div class="amt">${d>.5?`<span class="c-o">${inr(d)}</span><small><span class="pill due">Baki</span></small>`:d<-.5?`<span class="c-g">+${inr(d)}</span><small><span class="pill done">Extra</span></small>`:`<span class="pill done">✓ Pura</span>`}\n      ${d>.5?`<div><button class="link" style="padding:4px 0 0;color:var(--green)" data-payorder="${esc(o.id)}">₹ Payment</button></div>`:""}</div></div>`}).join("")}</div>`:`<div class="list"><div class="empty">Is party ka abhi koi order (maal) nahi.</div></div>`
 const khataHtml=rows.length||num(p.open)?`<div class="list">${rows.slice().reverse().map(r=>`<div class="item wrap" data-tx="${esc(r.t.id)}">\n    <div class="mid"><div class="t1" style="font-weight:500;font-size:13.5px;white-space:normal">${esc(ledDesc(r.t,id))}</div><div class="t2">${esc(dlabel(r.t.date,true))}${r.t.note?" · “"+esc(r.t.note)+"”":""}</div></div>\n    <div class="amt"><span class="${r.d>.5?"c-g":r.d<-.5?"c-r":"c-m"}">${r.d>.5?"+":r.d<-.5?"−":""}${inr(r.d)}</span><small class="c-m">Baki ${inr(r.run)} ${r.run>.5?"lena":r.run<-.5?"dena":""}</small></div></div>`).join("")}\n    ${num(p.open)?`<div class="item"><div class="mid"><div class="t1" style="font-weight:500;font-size:13.5px">Purana baki (opening)</div></div><div class="amt">${balTag(num(p.open))}</div></div>`:""}</div>`:`<div class="list"><div class="empty">Koi entry nahi.</div></div>`
-const html=`<div class="sh-title" style="align-items:flex-start"><div class="phead" style="margin:0"><div class="av ${T.c}">${esc((p.name[0]||"?").toUpperCase())}</div><div class="mid"><div class="t1" style="font-size:18px;font-weight:800">${esc(p.name)}</div>\n    <div class="t2"><span class="tag ${T.c}">${T.l}</span>${p.city?" · "+esc(p.city):""}${p.phone?" · "+esc(p.phone):""}${num(p.rate)?` · ${p.type==="tempo"?"Bhada":"Bhav"} ₹${num(p.rate).toLocaleString("en-IN")}${p.type==="tempo"?"/trip":"/Ton"}`:""}</div></div></div><button class="x" data-close aria-label="Band karo">✕</button></div>\n  <div class="pcard"><div class="lab" style="margin:0">${bal>.5?"Inse lena baki he":bal<-.5?"Inko dena baki he":"Hisab barabar"}</div>\n    <div class="big">${balTag(bal,true)}</div>\n    <div class="pgrid"><div><span>${p.type==="tempo"?"Total bhada":"Maal ka total"}</span><b>${inr(tb)}</b>${tq?`<small>${qn(tq)} Ton</small>`:""}</div>\n      <div><span>${isB?"Paisa mila":"Paisa diya"}</span><b>${inr(paidTot+unalloc)}</b></div>\n      <div><span>Baki</span><b class="${bal>.5?"c-g":bal<-.5?"c-r":""}">${inr(bal)}</b>${num(p.open)?"<small>purana milake</small>":""}</div></div></div>\n  <div class="pact">\n    ${p.type==="tempo"?"":`<button class="btn sm" data-pentry="${p.type==="supplier"?"buy":"sell"}">+ ${p.type==="supplier"?"Kharidi":"Bikri"}</button>`}\n    <button class="btn sm ${p.type==="tempo"?"":"ghost"}" data-pentry="${payT}">₹ ${payT==="in"?"Paisa mila":"Paisa diya"}</button>\n    <button class="btn sm ghost" data-receipt>🧾 Receipt / WhatsApp</button><button class="btn sm ghost" data-editp>✎ Edit</button></div>\n  <div class="seg" style="margin:12px 0 10px"><button data-ptab="orders" class="${ui.ptab==="orders"?"on":""}">Orders (${orders.length})</button><button data-ptab="khata" class="${ui.ptab==="khata"?"on":""}">Pura khata</button></div>\n  ${ui.ptab==="orders"?ordersHtml:khataHtml}\n  <div style="height:28px"></div>`
+const html=`<div class="sh-title" style="align-items:flex-start"><div class="phead" style="margin:0"><div class="av ${T.c}">${esc((p.name[0]||"?").toUpperCase())}</div><div class="mid"><div class="t1" style="font-size:18px;font-weight:800">${esc(p.name)}</div>\n    <div class="t2"><span class="tag ${T.c}">${T.l}</span>${p.city?" · "+esc(p.city):""}${p.phone?" · "+esc(p.phone):""}${num(p.rate)?` · ${p.type==="tempo"?"Bhada":"Bhav"} ₹${p.type==="tempo"?num(p.rate).toLocaleString("en-IN"):fr(prkg(p))}${p.type==="tempo"?"/trip":"/Kg"}`:""}</div></div></div><button class="x" data-close aria-label="Band karo">✕</button></div>\n  <div class="pcard"><div class="lab" style="margin:0">${bal>.5?"Inse lena baki he":bal<-.5?"Inko dena baki he":"Hisab barabar"}</div>\n    <div class="big">${balTag(bal,true)}</div>\n    <div class="pgrid"><div><span>${p.type==="tempo"?"Total bhada":"Maal ka total"}</span><b>${inr(tb)}</b>${tq?`<small>${qn(tq)} Ton</small>`:""}</div>\n      <div><span>${isB?"Paisa mila":"Paisa diya"}</span><b>${inr(paidTot+unalloc)}</b></div>\n      <div><span>Baki</span><b class="${bal>.5?"c-g":bal<-.5?"c-r":""}">${inr(bal)}</b>${num(p.open)?"<small>purana milake</small>":""}</div></div></div>\n  <div class="pact">\n    ${p.type==="tempo"?"":`<button class="btn sm" data-pentry="${p.type==="supplier"?"buy":"sell"}">+ ${p.type==="supplier"?"Kharidi":"Bikri"}</button>`}\n    <button class="btn sm ${p.type==="tempo"?"":"ghost"}" data-pentry="${payT}">₹ ${payT==="in"?"Paisa mila":"Paisa diya"}</button>\n    <button class="btn sm ghost" data-receipt>🧾 Receipt / WhatsApp</button><button class="btn sm ghost" data-editp>✎ Edit</button></div>\n  <div class="seg" style="margin:12px 0 10px"><button data-ptab="orders" class="${ui.ptab==="orders"?"on":""}">Orders (${orders.length})</button><button data-ptab="khata" class="${ui.ptab==="khata"?"on":""}">Pura khata</button></div>\n  ${ui.ptab==="orders"?ordersHtml:khataHtml}\n  <div style="height:28px"></div>`
 if(refresh){const b=$("#sheetBody"),st=b.scrollTop
 b.innerHTML='<div class="grab"></div>'+html
 b.scrollTop=st}else openSheet(html,{type:"party",id:id})}function partyText(id){const p=S.parties[id]
@@ -457,7 +461,7 @@ function openPartyForm(id,preset){const p=id?S.parties[id]:{type:preset||"buyer"
 pfType=p.type
 pfDir=num(p.open)?num(p.open)<0?-1:1:p.type==="buyer"?1:-1
 const used=id&&Object.values(S.txns).some(t=>t.party===id||t.tempo===id)
-openSheet(`${title(id?"Party edit":"Nayi party")}\n  <div class="seg" id="pType">${Object.entries(PT).map(([k,T])=>`<button type="button" data-pt="${k}" class="${k===p.type?"on":""}">${T.l}</button>`).join("")}</div>\n  <form id="pForm" onsubmit="return false">\n    <div class="f"><label>Naam</label><input name="pname" placeholder="Ashok bhai" value="${esc(p.name)}"></div>\n    <div class="f g2"><div><label>Sheher</label><input name="city" placeholder="Mumbai" value="${esc(p.city||"")}"></div>\n      <div><label>Phone</label><input name="phone" inputmode="tel" placeholder="98…" value="${esc(p.phone||"")}"></div></div>\n    <div class="f"><label id="pRateLbl">${p.type==="tempo"?"Bhada ₹ per trip (fix ho to)":"Bhav ₹/Ton (iska rate)"}</label><input name="prate" inputmode="decimal" placeholder="${p.type==="tempo"?"3000":"8500"}" value="${num(p.rate)||""}">\n      <div class="hint">Entry me apne aap bhar jayega. Entry me bhav badloge to naya yaad rahega.</div></div>\n    <div class="f"><label>Purana baki (agar he)</label><div class="g2"><input name="popen" inputmode="decimal" placeholder="₹0" value="${num(p.open)?Math.abs(num(p.open)):""}">\n      <div class="seg" id="pDir"><button type="button" data-dir="1" class="${pfDir>0?"on":""}">Inse lena</button><button type="button" data-dir="-1" class="${pfDir<0?"on":""}">Inko dena</button></div></div></div>\n    <div class="f"><label>Udhaar limit (optional)</label><input name="plimit" inputmode="decimal" placeholder="₹ — isse zyada baki hua to warning" value="${num(p.limit)||""}"></div>\n    <div class="actions">${id&&!used?`<button type="button" class="btn danger" data-delp="${esc(id)}">Delete</button>`:""}\n      <button type="button" class="btn" data-savep="${esc(id||"")}">Save</button></div>\n    ${used?'<div class="hint" style="margin-top:-8px;padding-bottom:16px">Is party ki entries he, isliye delete nahi hogi.</div>':""}\n  </form>`,{
+openSheet(`${title(id?"Party edit":"Nayi party")}\n  <div class="seg" id="pType">${Object.entries(PT).map(([k,T])=>`<button type="button" data-pt="${k}" class="${k===p.type?"on":""}">${T.l}</button>`).join("")}</div>\n  <form id="pForm" onsubmit="return false">\n    <div class="f"><label>Naam</label><input name="pname" placeholder="Ashok bhai" value="${esc(p.name)}"></div>\n    <div class="f g2"><div><label>Sheher</label><input name="city" placeholder="Mumbai" value="${esc(p.city||"")}"></div>\n      <div><label>Phone</label><input name="phone" inputmode="tel" placeholder="98…" value="${esc(p.phone||"")}"></div></div>\n    <div class="f"><label id="pRateLbl">${p.type==="tempo"?"Bhada ₹ per trip (fix ho to)":"Bhav ₹/Kg (iska rate)"}</label><input name="prate" inputmode="decimal" placeholder="${p.type==="tempo"?"3000":"jaise 8.50"}" value="${p.type==="tempo"?num(p.rate)||"":prkg(p)?+prkg(p).toFixed(4):""}">\n      <div class="hint">Entry me apne aap bhar jayega. Entry me bhav badloge to naya yaad rahega.</div></div>\n    <div class="f"><label>Purana baki (agar he)</label><div class="g2"><input name="popen" inputmode="decimal" placeholder="₹0" value="${num(p.open)?Math.abs(num(p.open)):""}">\n      <div class="seg" id="pDir"><button type="button" data-dir="1" class="${pfDir>0?"on":""}">Inse lena</button><button type="button" data-dir="-1" class="${pfDir<0?"on":""}">Inko dena</button></div></div></div>\n    <div class="f"><label>Udhaar limit (optional)</label><input name="plimit" inputmode="decimal" placeholder="₹ — isse zyada baki hua to warning" value="${num(p.limit)||""}"></div>\n    <div class="actions">${id&&!used?`<button type="button" class="btn danger" data-delp="${esc(id)}">Delete</button>`:""}\n      <button type="button" class="btn" data-savep="${esc(id||"")}">Save</button></div>\n    ${used?'<div class="hint" style="margin-top:-8px;padding-bottom:16px">Is party ki entries he, isliye delete nahi hogi.</div>':""}\n  </form>`,{
 type:"pform"})
 if(!id)setTimeout(()=>{const i=$("#pForm [name=pname]")
 i&&i.focus()},280)}function saveParty(id){const f=$("#pForm").elements
@@ -467,7 +471,7 @@ f.namedItem("pname").focus()
 return}const dup=Object.values(S.parties).find(p=>p.id!==id&&p.name.toLowerCase()===name.toLowerCase())
 if(dup){toast("Is naam ki party pehle se he")
 return}const old=id?S.parties[id]:null
-const p={kind:"party",id:id||"p_"+uid(),name:name,type:pfType,city:f.namedItem("city").value.trim(),phone:f.namedItem("phone").value.trim(),rate:num(f.namedItem("prate").value),limit:num(f.namedItem("plimit").value),open:Math.abs(num(f.namedItem("popen").value))*pfDir,ts:old?.ts||Date.now()}
+const p={kind:"party",id:id||"p_"+uid(),name:name,type:pfType,city:f.namedItem("city").value.trim(),phone:f.namedItem("phone").value.trim(),rate:num(f.namedItem("prate").value),rateUnit:pfType==="tempo"?"trip":"kg",limit:num(f.namedItem("plimit").value),open:Math.abs(num(f.namedItem("popen").value))*pfDir,ts:old?.ts||Date.now()}
 put(p)
 toast("Party save ✓")
 openParty(p.id)}function openMenu(){
@@ -477,11 +481,11 @@ toast(ok||"Copy ho gaya ✓")}catch(e){openSheet(`${title("Copy karo")}<div clas
 setTimeout(()=>{const t=$("#cpy")
 t&&t.select()},200)}}function csv(flt){const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"'
 const A=allocIndex()
-const rows=[["Tarikh","Din","Type","Party","Sheher","Maal","Unit","Bhav/Ton","Amount","Turant paisa","Order baki","Tempo","Gadi","Bhada","Advance","Advance kisne","Khali pe","Khali kisne","Mode","Kis order ka","Note"]]
+const rows=[["Tarikh","Din","Type","Party","Sheher","Maal","Unit","Bhav ₹/Kg","Amount","Turant paisa","Order baki","Tempo","Gadi","Bhada","Advance","Advance kisne","Khali pe","Khali kisne","Mode","Kis order ka","Note"]]
 Object.values(S.txns).filter(t=>!flt||flt(t)).sort(byDateAsc).forEach(t=>{const p=S.parties[t.party]||{}
 const[y,m,d]=(t.date||"").split("-").map(Number)
 const g=isGoods(t.t)
-rows.push([t.date,DAYS[new Date(y,m-1,d).getDay()],t.t==="exp"?"Kharcha · "+(t.cat||""):TT[t.t]?.l,p.name,p.city,t.qty,t.unit,t.rate,t.amount,t.paid,g?Math.round(orderDue(t,t.party,A)):"",t.tempo?pname(t.tempo):"",t.vehicle,t.bhada,t.adv,t.adv?byWho(t.advBy,t.t):"",t.khali,t.khali?byWho(t.khaliBy,t.t):"",t.mode||t.pmode,allocText(t),t.note])})
+rows.push([t.date,DAYS[new Date(y,m-1,d).getDay()],t.t==="exp"?"Kharcha · "+(t.cat||""):TT[t.t]?.l,p.name,p.city,t.qty,t.unit,g&&num(t.rate)?+rkg(t).toFixed(4):"",t.amount,t.paid,g?Math.round(orderDue(t,t.party,A)):"",t.tempo?pname(t.tempo):"",t.vehicle,t.bhada,t.adv,t.adv?byWho(t.advBy,t.t):"",t.khali,t.khali?byWho(t.khaliBy,t.t):"",t.mode||t.pmode,allocText(t),t.note])})
 return rows.map(r=>r.map(q).join(",")).join("\n")}const bizName=()=>S.cfg&&S.cfg.biz||"Aasif Coal Traders"
 let DL=null,rState={},rBlob=null
 function openBiz(){const c=S.cfg||{}
@@ -500,7 +504,7 @@ if(!asT&&partyTempoPaid(o))extra.push(`tempo ko aapne diya ${inr(partyTempoPaid(
 if(asT&&(num(o.adv)||num(o.khali)))extra.push(`diya ${inr(num(o.adv)+num(o.khali))}`)
 if(o.vehicle)extra.push(o.vehicle)
 if(o.note)extra.push(o.note)
-return{date:o.date,title:asT?`Bhada · ${pname(o.party)} · ${qn(o.qty)} ${o.unit||"Ton"}`:`${TT[o.t].l} · ${qn(o.qty)} ${o.unit||"Ton"}${num(o.rate)?" × ₹"+num(o.rate).toLocaleString("en-IN"):""}`,sub:extra.join(" · "),amt:inr(orderBill(o,id)),status:due>.5?"Baki "+inr(due):due<-.5?"Extra "+inr(due):"✓ Pura",stone:due>.5?"o":"g"}})
+return{date:o.date,title:asT?`Bhada · ${pname(o.party)} · ${qn(o.qty)} ${o.unit||"Ton"}`:`${TT[o.t].l} · ${qn(o.qty)} ${o.unit||"Ton"}${num(o.rate)?" × ₹"+fr(rkg(o))+"/Kg":""}`,sub:extra.join(" · "),amt:inr(orderBill(o,id)),status:due>.5?"Baki "+inr(due):due<-.5?"Extra "+inr(due):"✓ Pura",stone:due>.5?"o":"g"}})
 let note=""
 if(rows.length>45){note=`Sirf aakhri 45 entries dikhayi he (kul ${rows.length})`
 rows=rows.slice(-45)}let tb=0,dueSum=0
@@ -515,7 +519,7 @@ return{kind:mode==="due"?"BAKI HISAB":"PURA HISAB",party:p,rows:rows,totals:tota
 const pid=o.party
 const p=S.parties[pid]||{name:"—"}
 const A=allocIndex()
-const rows=[{date:o.date,title:`${TT[o.t].l} · ${qn(o.qty)} ${o.unit||"Ton"}${num(o.rate)?" × ₹"+num(o.rate).toLocaleString("en-IN")+"/Ton":""}`,sub:[o.tempo?"🚚 "+pname(o.tempo):"",o.vehicle,o.note].filter(Boolean).join(" · "),amt:inr(o.amount)}]
+const rows=[{date:o.date,title:`${TT[o.t].l} · ${qn(o.qty)} ${o.unit||"Ton"}${num(o.rate)?" × ₹"+fr(rkg(o))+"/Kg":""}`,sub:[o.tempo?"🚚 "+pname(o.tempo):"",o.vehicle,o.note].filter(Boolean).join(" · "),amt:inr(o.amount)}]
 if(num(o.paid))rows.push({date:o.date,title:`Turant payment · ${o.pmode||"Cash"}`,amt:"− "+inr(o.paid),tone:"g"})
 const pt=partyTempoPaid(o)
 if(pt)rows.push({date:o.khaliDate||o.date,title:"Tempo ko aapne diya (bhada)",amt:(o.t==="sell"?"− ":"+ ")+inr(pt),tone:"g"})
@@ -818,8 +822,8 @@ r.q+=q
 r.a+=num(t.amount)
 if(t.date>r.d)r.d=t.date}})
 const st=bq-sq,avg=bq?ba/bq:0
-const tbl=(o,lbl)=>Object.entries(o).sort((a,b)=>b[1].q-a[1].q).map(([id,r])=>`<div class="item" data-party="${esc(id)}"><div class="mid"><div class="t1">${esc(pname(id))}</div><div class="t2">Aakhri ${esc(dlabel(r.d,true))} · avg ₹${Math.round(r.q?r.a/r.q:0).toLocaleString("en-IN")}/Ton</div></div><div class="amt">${qn(r.q)} Ton<small class="c-m">${inr(r.a)}</small></div></div>`).join("")
-return`<div class="pcard" style="text-align:center"><div class="lab" style="margin:0">Abhi stock (andaaz)</div><div class="big ${st<0?"c-r":""}" style="font-size:34px">${qn(st)} Ton</div>\n    <div class="hint">${st<0?"Bikri kharidi se zyada he — shayad kuch kharidi entry baki he.":`Kimat (avg kharidi bhav se): ${inr(st*avg)}`}</div></div>\n  <div class="kpis" style="margin-top:10px">${kpi("Kul kharida",qn(bq)+" Ton","Avg ₹"+Math.round(avg).toLocaleString("en-IN")+"/Ton")}${kpi("Kul becha",qn(sq)+" Ton","Avg ₹"+Math.round(sq?sa/sq:0).toLocaleString("en-IN")+"/Ton")}</div>\n  <div class="sec-h"><h2>Supplier se kitna aaya</h2></div>${Object.keys(sup).length?`<div class="list">${tbl(sup)}</div>`:'<div class="list"><div class="empty">Abhi koi kharidi nahi.</div></div>'}\n  <div class="sec-h"><h2>Grahak ko kitna gaya</h2></div>${Object.keys(cus).length?`<div class="list">${tbl(cus)}</div>`:'<div class="list"><div class="empty">Abhi koi bikri nahi.</div></div>'}`}function pgTempo(){const A=allocIndex()
+const tbl=(o,lbl)=>Object.entries(o).sort((a,b)=>b[1].q-a[1].q).map(([id,r])=>`<div class="item" data-party="${esc(id)}"><div class="mid"><div class="t1">${esc(pname(id))}</div><div class="t2">Aakhri ${esc(dlabel(r.d,true))} · avg ₹${fr(r.q?r.a/r.q/1e3:0)}/Kg</div></div><div class="amt">${qn(r.q)} Ton<small class="c-m">${inr(r.a)}</small></div></div>`).join("")
+return`<div class="pcard" style="text-align:center"><div class="lab" style="margin:0">Abhi stock (andaaz)</div><div class="big ${st<0?"c-r":""}" style="font-size:34px">${qn(st)} Ton</div>\n    <div class="hint">${st<0?"Bikri kharidi se zyada he — shayad kuch kharidi entry baki he.":`Kimat (avg kharidi bhav se): ${inr(st*avg)}`}</div></div>\n  <div class="kpis" style="margin-top:10px">${kpi("Kul kharida",qn(bq)+" Ton","Avg ₹"+fr(avg/1e3)+"/Kg")}${kpi("Kul becha",qn(sq)+" Ton","Avg ₹"+fr(sq?sa/sq/1e3:0)+"/Kg")}</div>\n  <div class="sec-h"><h2>Supplier se kitna aaya</h2></div>${Object.keys(sup).length?`<div class="list">${tbl(sup)}</div>`:'<div class="list"><div class="empty">Abhi koi kharidi nahi.</div></div>'}\n  <div class="sec-h"><h2>Grahak ko kitna gaya</h2></div>${Object.keys(cus).length?`<div class="list">${tbl(cus)}</div>`:'<div class="list"><div class="empty">Abhi koi bikri nahi.</div></div>'}`}function pgTempo(){const A=allocIndex()
 const all=goodsList().filter(t=>t.tempo||num(t.bhada)).sort((a,b)=>byDateAsc(b,a))
 const temps=[...new Set(all.map(t=>t.tempo).filter(Boolean))]
 const L=pst.tp==="all"?all:all.filter(t=>t.tempo===pst.tp)
@@ -838,7 +842,7 @@ const ex=expList().filter(t=>(t.date||"").startsWith(k)).reduce((s,t)=>s+num(t.a
 const net=gp-ex
 const noBuy=!avgBuyRate()
 return`${mnav("mm",k)}<div class="kpis">${kpi("Bikri se munafa",(gp<0?"−":"")+inr(gp),S1.length+" bikri",gp>=0?"c-g":"c-r")}${kpi("Kharche",inr(ex),"Kharche page se","c-r")}</div>\n  <div class="pcard" style="margin-top:10px;display:flex;justify-content:space-between;align-items:center"><div><div class="lab" style="margin:0">Asli munafa (kharche ke baad)</div><div class="big ${net>=0?"c-g":"c-r"}">${net<0?"−":""}${inr(net)}</div></div></div>\n  <div class="hint" style="margin:8px 4px 0">${noBuy?"⚠️ Abhi koi kharidi entry nahi, isliye maal ki lagat ₹0 maani he.":"Lagat = becha hua Ton × aapka average kharidi bhav. Bhada bhi ghataya he."}</div>\n  <div class="sec-h"><h2>Har bikri ka munafa</h2></div>\n  ${S1.length?`<div class="list">${S1.map(t=>{const p=saleProfit(t)
-return`<div class="item wrap" data-tx="${esc(t.id)}"><div class="av blue">${ICON.sell}</div>\n    <div class="mid"><div class="t1">${esc(pname(t.party))} · ${qn(t.qty)} Ton</div><div class="t2">${esc(dlabel(t.date,true))} · Becha ₹${num(t.rate).toLocaleString("en-IN")} · Liya ~₹${Math.round(p.avg).toLocaleString("en-IN")}${num(t.bhada)?" · bhada "+inr(t.bhada):""}</div></div>\n    <div class="amt ${p.profit>=0?"c-g":"c-r"}">${p.profit<0?"−":"+"}${inr(p.profit)}<small class="c-m">bill ${inr(t.amount)}</small></div></div>`}).join("")}</div>`:`<div class="list"><div class="empty">Is mahine koi bikri nahi.</div></div>`}`}function monthStats(k){const G=goodsList().filter(t=>(t.date||"").startsWith(k))
+return`<div class="item wrap" data-tx="${esc(t.id)}"><div class="av blue">${ICON.sell}</div>\n    <div class="mid"><div class="t1">${esc(pname(t.party))} · ${qn(t.qty)} Ton</div><div class="t2">${esc(dlabel(t.date,true))} · Becha ₹${fr(rkg(t))}/Kg · Liya ~₹${fr(p.avg/1e3)}/Kg${num(t.bhada)?" · bhada "+inr(t.bhada):""}</div></div>\n    <div class="amt ${p.profit>=0?"c-g":"c-r"}">${p.profit<0?"−":"+"}${inr(p.profit)}<small class="c-m">bill ${inr(t.amount)}</small></div></div>`}).join("")}</div>`:`<div class="list"><div class="empty">Is mahine koi bikri nahi.</div></div>`}`}function monthStats(k){const G=goodsList().filter(t=>(t.date||"").startsWith(k))
 let s=0,sq=0,b=0,bq=0,bh=0,gp=0
 G.forEach(t=>{if(t.t==="sell"){s+=num(t.amount)
 sq+=tons(t)
@@ -848,13 +852,13 @@ const ex=expList().filter(t=>(t.date||"").startsWith(k)).reduce((a,t)=>a+num(t.a
 let fin=0,fout=0
 flows().forEach(f=>{if((f.d||"").startsWith(k)){if(f.v>0)fin+=f.v
 else fout-=f.v}})
-return{s:s,sq:sq,b:b,bq:bq,bh:bh,ex:ex,gp:gp,net:gp-ex,fin:fin,fout:fout,sr:sq?s/sq:0,br:bq?b/bq:0,G:G}}function lineChart(series,labels){const W=320,H=150,P=28
+return{s:s,sq:sq,b:b,bq:bq,bh:bh,ex:ex,gp:gp,net:gp-ex,fin:fin,fout:fout,sr:sq?s/sq/1e3:0,br:bq?b/bq/1e3:0,G:G}}function lineChart(series,labels){const W=320,H=150,P=28
 const all=series.flatMap(s=>s.v).filter(v=>v>0)
 if(!all.length)return'<div class="hint">Graph ke liye abhi data kam he.</div>'
 const mx=Math.max(...all)*1.1,mn=Math.min(...all)*.9
 const X=i=>P+i*(W-P-10)/Math.max(1,labels.length-1),Y=v=>H-22-(v-mn)/Math.max(1,mx-mn)*(H-40)
 let g=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto">`;[0,.5,1].forEach(f=>{const v=mn+(mx-mn)*f
-g+=`<line x1="${P}" x2="${W-6}" y1="${Y(v)}" y2="${Y(v)}" stroke="#ECECE6"/><text x="2" y="${Y(v)+4}" font-size="9" fill="#999">${Math.round(v/100)/10}k</text>`})
+g+=`<line x1="${P}" x2="${W-6}" y1="${Y(v)}" y2="${Y(v)}" stroke="#ECECE6"/><text x="2" y="${Y(v)+4}" font-size="9" fill="#999">${v>=1e3?Math.round(v/100)/10+"k":+v.toFixed(1)}</text>`})
 labels.forEach((l,i)=>g+=`<text x="${X(i)}" y="${H-6}" font-size="10" fill="#888" text-anchor="middle">${l}</text>`)
 series.forEach(s=>{const pts=s.v.map((v,i)=>v>0?[X(i),Y(v)]:null).filter(Boolean)
 if(pts.length>1)g+=`<polyline fill="none" stroke="${s.c}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" points="${pts.map(p=>p.join(",")).join(" ")}"/>`
@@ -869,7 +873,7 @@ return arr.length?`<div class="box">${arr.map(([id,v])=>`<div class="hbar"><span
 const ms=[]
 for(let i=5;i>=0;i--)ms.push(mshift(k,-i))
 const st=ms.map(monthStats)
-return`${mnav("rm",k)}\n  <div class="kpis">${kpi("Bikri",inr(m.s),qn(m.sq)+" Ton")}${kpi("Kharidi",inr(m.b),qn(m.bq)+" Ton")}${kpi("Bhada + Kharche",inr(m.bh+m.ex),"Bhada "+inr(m.bh)+" · Kharche "+inr(m.ex),"c-r")}${kpi("Munafa (andaaz)",(m.net<0?"−":"")+inr(m.net),"kharche ke baad",m.net>=0?"c-g":"c-r")}\n  ${kpi("Paisa aaya",inr(m.fin),"","c-g")}${kpi("Paisa gaya",inr(m.fout),"","c-r")}</div>\n  <a class="btn" style="display:block;text-align:center;text-decoration:none;background:#1FA855;margin-top:12px" target="_blank" rel="noopener" href="${esc(waLink(reportText(k,m),""))}">Report WhatsApp pe bhejo</a>\n  <div class="sec-h"><h2>Bhav ka graph (₹/Ton)</h2></div><div class="box">${lineChart([{n:"Bikri bhav",c:"#1D43A6",v:st.map(x=>x.sr)},{n:"Kharidi bhav",c:"#C2610C",v:st.map(x=>x.br)}],ms.map(x=>MON[+x.slice(5)-1]))}</div>\n  <div class="sec-h"><h2>Top grahak</h2></div>${bars(top("sell"),"var(--green)")}\n  <div class="sec-h"><h2>Top supplier</h2></div>${bars(top("buy"),"#C2610C")}`}function pgExport(){const f=pst.ef||today().slice(0,8)+"01",t=pst.et||today()
+return`${mnav("rm",k)}\n  <div class="kpis">${kpi("Bikri",inr(m.s),qn(m.sq)+" Ton")}${kpi("Kharidi",inr(m.b),qn(m.bq)+" Ton")}${kpi("Bhada + Kharche",inr(m.bh+m.ex),"Bhada "+inr(m.bh)+" · Kharche "+inr(m.ex),"c-r")}${kpi("Munafa (andaaz)",(m.net<0?"−":"")+inr(m.net),"kharche ke baad",m.net>=0?"c-g":"c-r")}\n  ${kpi("Paisa aaya",inr(m.fin),"","c-g")}${kpi("Paisa gaya",inr(m.fout),"","c-r")}</div>\n  <a class="btn" style="display:block;text-align:center;text-decoration:none;background:#1FA855;margin-top:12px" target="_blank" rel="noopener" href="${esc(waLink(reportText(k,m),""))}">Report WhatsApp pe bhejo</a>\n  <div class="sec-h"><h2>Bhav ka graph (₹/Kg)</h2></div><div class="box">${lineChart([{n:"Bikri bhav",c:"#1D43A6",v:st.map(x=>x.sr)},{n:"Kharidi bhav",c:"#C2610C",v:st.map(x=>x.br)}],ms.map(x=>MON[+x.slice(5)-1]))}</div>\n  <div class="sec-h"><h2>Top grahak</h2></div>${bars(top("sell"),"var(--green)")}\n  <div class="sec-h"><h2>Top supplier</h2></div>${bars(top("buy"),"#C2610C")}`}function pgExport(){const f=pst.ef||today().slice(0,8)+"01",t=pst.et||today()
 const n=Object.values(S.txns).filter(x=>x.date>=f&&x.date<=t).length
 return`<div class="box"><div class="g2"><div><div class="lab">Kab se</div><input type="date" id="ef" value="${f}"></div><div><div class="lab">Kab tak</div><input type="date" id="et" value="${t}"></div></div>\n  <div class="chips" style="margin-top:10px">${[["m","Is mahina"],["lm","Pichla mahina"],["y","Is saal"],["all","Sab"]].map(([k,l])=>`<button class="chip" data-eq="${k}">${l}</button>`).join("")}</div></div>\n  <div class="hint" style="margin:10px 4px">${n} entries milengi (kharidi, bikri, payment, kharche — sab).</div>\n  <button class="btn" style="width:100%" data-exdl>⇩ Excel file (CSV) download</button>\n  <button class="btn ghost" style="width:100%;margin-top:10px" data-excp>Text copy karo</button>\n  <div class="hint" style="margin:10px 4px">CSV file Excel / Google Sheets me seedha khulti he.</div>`}function csvRange(f,t){return csv(x=>x.date>=f&&x.date<=t)}async function pinHash(p){try{const b=await crypto.subtle.digest("SHA-256",(new TextEncoder).encode("coalhisab:"+p))
 return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")}catch(e){let h=0
@@ -1042,7 +1046,7 @@ return}if(ds.ptab){ui.ptab=ds.ptab
 openParty(sheetMode.id,true)
 return}if(ds.pt){pfType=ds.pt
 document.querySelectorAll("#pType button").forEach(b=>b.classList.toggle("on",b===el))
-$("#pRateLbl").textContent=pfType==="tempo"?"Bhada ₹ per trip (fix ho to)":"Bhav ₹/Ton (iska rate)"
+$("#pRateLbl").textContent=pfType==="tempo"?"Bhada ₹ per trip (fix ho to)":"Bhav ₹/Kg (iska rate)"
 return}if(ds.dir){pfDir=+ds.dir
 document.querySelectorAll("#pDir button").forEach(b=>b.classList.toggle("on",b===el))
 return}if(ds.savep!==undefined){saveParty(ds.savep||null)
