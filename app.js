@@ -83,7 +83,7 @@ S.cfg={}
 S.bin={}
 render()
 FB.anon().catch(e=>{console.error(e)
-showLogin(e.code==="auth/admin-restricted-operation"||e.code==="auth/operation-not-allowed"?"Firebase me Anonymous sign-in on karo (Authentication → Sign-in method).":"Connect nahi hua: "+(e.code||e.message))})
+showLogin(["auth/admin-restricted-operation","auth/operation-not-allowed","auth/configuration-not-found"].includes(e.code)?"Firebase setup baaki he: Firebase console → Authentication → Get started → Sign-in method → Anonymous ko Enable karo, phir ye page reload karo.":e.code==="auth/network-request-failed"?"Internet nahi he. Net on karke page reload karo.":"Connect nahi hua: "+(e.code||e.message))})
 return}hideLogin()
 const base=["shops","aasif-coal","docs"]
 col={doc:id=>({set:d=>FB.set(base,id,d),delete:()=>FB.del(base,id)})}
@@ -93,7 +93,7 @@ const m=snap.metadata
 setSync(m.fromCache?"Offline — internet aate hi sync":m.hasPendingWrites?"Sync ho raha he…":"Saved · Firebase",m.fromCache||m.hasPendingWrites?"warn":"ok")
 render()},err=>{console.error(err)
 setSync("Data nahi mila — rules check karo","warn")
-toast(err.code==="permission-denied"?"Permission nahi — Firestore rules lagao":"Sync error: "+(err.code||""))})})}function migrateLocal(empty){let j=null
+toast(err.code==="permission-denied"?"Permission nahi — Firestore Rules publish karo":err.code==="not-found"||err.code==="failed-precondition"?"Firestore Database abhi bana nahi — Firebase console me Create database karo":"Sync error: "+(err.code||""))})})}function migrateLocal(empty){let j=null
 try{j=JSON.parse(localStorage.getItem(LK)||"null")}catch(e){}if(!j)return
 if(empty){const all=[...Object.values(j.parties||{}),...Object.values(j.txns||{})]
 all.forEach(d=>{(d.kind==="party"?S.parties:S.txns)[d.id]=d
