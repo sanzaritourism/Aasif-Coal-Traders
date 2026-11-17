@@ -230,7 +230,9 @@ const pendN=ordersOf(p.id).filter(o=>orderDue(o,p.id,RA)>.5).length
 const over=num(p.limit)&&x>num(p.limit)
 const right=x>.5?`<small class="c-g">Milega</small><span class="c-g">${inr(x)}</span>`:x<-.5?`<small class="c-r">Dena he</small><span class="c-r">${inr(x)}</span>`:`<small class="c-m">Hisab</small><span class="c-m" style="font-size:14px">✓ Barabar</span>`
 return`<div class="item" data-party="${esc(p.id)}"><div class="av ${T.c}">${esc((p.name[0]||"?").toUpperCase())}</div>\n    <div class="mid"><div class="t1">${esc(p.name)}${over?' <span class="pill late">Limit cross</span>':""}</div><div class="t2"><span class="tag ${T.c}">${T.l}</span>${p.city?" · "+esc(p.city):""}${pendN?` · <span class="c-o">${pendN} order baki</span>`:""}</div></div>\n    <div class="amt pamt">${right}</div></div>`}).join("")}</div>`:`<div class="list"><div class="empty"><b>Koi party nahi</b>Supplier, tempo wale aur grahak yahan dikhenge.</div></div>`}let sheetMode=null
-function openSheet(html,mode){sheetMode=mode||null
+function openSheet(html,mode){sheetInit=null
+setTimeout(()=>{sheetInit=sheetVals()},450)
+sheetMode=mode||null
 const b=$("#sheetBody")
 b.innerHTML='<div class="grab"></div>'+html
 $("#sheet").hidden=false
@@ -974,7 +976,8 @@ return}fn()}document.addEventListener("click",e=>{if(e.target.id==="rstBtn"){res
 return}const el=e.target.closest("[data-tab],[data-close],[data-new],[data-payorder],[data-tx],[data-party],[data-addparty],[data-hf],[data-hp],[data-pf],[data-et],[data-edtot],[data-tempotog],[data-mode],[data-by],[data-oid],[data-save],[data-deltx],[data-pentry],[data-editp],[data-receipt],[data-billtx],[data-rmode],[data-rsave],[data-rcopyimg],[data-rcopytxt],[data-savebiz],[data-ptab],[data-pt],[data-dir],[data-savep],[data-delp],[data-act]")
 if(!el)return
 const ds=el.dataset
-if(ds.close!==undefined){if(sheetMode&&sheetMode.type==="receipt"){if(rState.backTx){openEntry({id:rState.backTx,back:rState.back})
+if(ds.close!==undefined){if(el.classList.contains("backdrop")&&sheetDirty()){confirmBox("Entry save nahi hui","Bina save kiye band karna he? Likha hua data chala jayega.","Haan, band karo",()=>{sheetInit=null;el.click()})
+return}if(sheetMode&&sheetMode.type==="receipt"){if(rState.backTx){openEntry({id:rState.backTx,back:rState.back})
 return}if(rState.back){openParty(rState.back)
 return}}if(sheetMode&&(sheetMode.type==="entry"||sheetMode.type==="pform")&&backTo){openParty(backTo)
 backTo=null
@@ -1124,3 +1127,29 @@ upd()})()
 document.addEventListener("focusin",e=>{const t=e.target
 if(!t.matches||!t.matches(".sheet input,.sheet select,.sheet textarea"))return
 setTimeout(()=>{try{t.scrollIntoView({block:"center",behavior:"smooth"})}catch(err){}},320)})
+let sheetInit=null,exiting=false
+function sheetVals(){return[...document.querySelectorAll("#sheetBody input,#sheetBody select,#sheetBody textarea")].map(i=>i.value).join("|")}
+function sheetDirty(){if($("#sheet").hidden||!sheetMode||sheetInit===null)return false
+if(!["entry","pform","exp","biz","co","restore"].includes(sheetMode.type))return false
+return sheetVals()!==sheetInit}
+function closeConfirm(){const c=$("#confirm");if(c)c.remove()}
+function confirmBox(title,msg,yes,onYes,no){closeConfirm()
+const d=document.createElement("div");d.id="confirm";d.className="cbox"
+d.innerHTML=`<div class="cback"></div><div class="ccard"><h3>${esc(title)}</h3>${msg?`<p>${esc(msg)}</p>`:""}<div class="cbtns"><button class="btn ghost" data-cno>${esc(no||"Nahi, ruko")}</button><button class="btn" data-cyes>${esc(yes)}</button></div></div>`
+document.body.appendChild(d)
+d.querySelector("[data-cno]").onclick=closeConfirm
+d.querySelector(".cback").onclick=closeConfirm
+d.querySelector("[data-cyes]").onclick=()=>{closeConfirm();onYes()}}
+function closeSheetLikeX(){sheetInit=null;const x=$("#sheetBody [data-close]");if(x)x.click();else closeSheet()}
+function handleBack(){if($("#confirm")){closeConfirm();return}
+if($("#lock")||$("#login"))return
+if(!$("#drawer").hidden){toggleDrawer(false);return}
+if(!$("#sheet").hidden){if(sheetDirty()){confirmBox("Entry save nahi hui","Bina save kiye band karna he? Likha hua data chala jayega.","Haan, band karo",closeSheetLikeX);return}closeSheetLikeX();return}
+if(pageMode){closePage();return}
+if(ui.tab!=="home"){ui.tab="home";$("#view").dataset.v="";render();window.scrollTo(0,0);return}
+confirmBox("App band karni he?","","Haan, band karo",()=>{exiting=true;history.go(-2)})}
+try{history.replaceState({root:1},"");history.pushState({trap:1},"")}catch(e){}
+window.addEventListener("popstate",()=>{if(exiting)return
+try{history.pushState({trap:1},"")}catch(e){}
+handleBack()})
+window.addEventListener("beforeunload",e=>{if(sheetDirty()){e.preventDefault();e.returnValue=""}})

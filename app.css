@@ -257,3 +257,9 @@ textarea{min-height:120px;font-size:13px;font-family:ui-monospace,monospace}
 .top{padding-top:env(safe-area-inset-top)}
 .onacc{font-size:12.5px;color:var(--mut);background:#fff;border:1px dashed var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px}
 .sheet input:focus,.sheet select:focus{scroll-margin-bottom:140px}
+.cbox{position:fixed;inset:0;z-index:80;display:grid;place-items:center;padding:24px}
+.cback{position:absolute;inset:0;background:rgba(10,11,14,.5);animation:fade .15s}
+.ccard{position:relative;background:#fff;border-radius:20px;padding:20px;width:100%;max-width:340px;box-shadow:0 20px 50px rgba(0,0,0,.25);animation:up .2s}
+.ccard h3{margin:0 0 6px;font-size:18px;font-weight:800;letter-spacing:-.02em}
+.ccard p{margin:0;color:var(--mut);font-size:14px;line-height:1.45}
+.cbtns{display:flex;gap:10px;margin-top:18px}
