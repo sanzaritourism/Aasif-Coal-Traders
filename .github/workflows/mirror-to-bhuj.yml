@@ -1,0 +1,24 @@
+name: Mirror to Bhuj repo (bhujtop-tech/asifcoal)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Push same code to bhujtop-tech/asifcoal
+        env:
+          TOKEN: ${{ secrets.MIRROR_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::MIRROR_TOKEN secret nahi mila. Settings > Secrets and variables > Actions me MIRROR_TOKEN add karo."
+            exit 1
+          fi
+          git push --force "https://x-access-token:${TOKEN}@github.com/bhujtop-tech/asifcoal.git" HEAD:main
+          echo "Bhuj repo update ho gaya"
