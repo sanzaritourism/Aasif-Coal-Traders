@@ -1113,3 +1113,14 @@ window.addEventListener("online",()=>{setSync("Sync ho raha he…","warn")
 toast("📶 Net aa gaya — sync ho raha he")})
 render()
 setTimeout(connect,0)
+
+;(function(){const vv=window.visualViewport;if(!vv)return
+const upd=()=>{const kb=Math.max(0,window.innerHeight-vv.height-vv.offsetTop)
+document.documentElement.style.setProperty("--kb",kb+"px")
+document.documentElement.style.setProperty("--vvh",vv.height+"px")}
+vv.addEventListener("resize",upd)
+vv.addEventListener("scroll",upd)
+upd()})()
+document.addEventListener("focusin",e=>{const t=e.target
+if(!t.matches||!t.matches(".sheet input,.sheet select,.sheet textarea"))return
+setTimeout(()=>{try{t.scrollIntoView({block:"center",behavior:"smooth"})}catch(err){}},320)})
