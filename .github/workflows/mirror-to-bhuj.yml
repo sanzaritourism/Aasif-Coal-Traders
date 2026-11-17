@@ -12,15 +12,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
           persist-credentials: false
-      - name: Push same code to bhujtop-tech/asifcoal
+      - name: Push same code to bhujtop-tech/asifcoal (as bhujtop-tech, so Vercel allows deploy)
         env:
           TOKEN: ${{ secrets.MIRROR_TOKEN }}
+          SRC_SHA: ${{ github.sha }}
+          SRC_MSG: ${{ github.event.head_commit.message }}
         run: |
           if [ -z "$TOKEN" ]; then
-            echo "::error::MIRROR_TOKEN secret nahi mila. Settings > Secrets and variables > Actions me MIRROR_TOKEN add karo."
+            echo "::error::MIRROR_TOKEN secret nahi mila."
             exit 1
           fi
-          git push --force "https://bhujtop-tech:${TOKEN}@github.com/bhujtop-tech/asifcoal.git" HEAD:main
+          U=$(curl -sS -H "Authorization: token $TOKEN" https://api.github.com/user)
+          LOGIN=$(echo "$U" | python3 -c "import sys,json;print(json.load(sys.stdin)['login'])")
+          UID_=$(echo "$U" | python3 -c "import sys,json;print(json.load(sys.stdin)['id'])")
+          EMAIL="${UID_}+${LOGIN}@users.noreply.github.com"
+          echo "Committing as $LOGIN <$EMAIL>"
+          git checkout --orphan bhuj-sync
+          git add -A
+          TITLE=$(printf '%s' "$SRC_MSG" | head -n1)
+          GIT_AUTHOR_NAME="$LOGIN" GIT_AUTHOR_EMAIL="$EMAIL" GIT_COMMITTER_NAME="$LOGIN" GIT_COMMITTER_EMAIL="$EMAIL" \
+            git commit -q -m "${TITLE:-Sync} (sync ${SRC_SHA:0:7})"
+          git push --force "https://${LOGIN}:${TOKEN}@github.com/bhujtop-tech/asifcoal.git" bhuj-sync:main
           echo "Bhuj repo update ho gaya"
